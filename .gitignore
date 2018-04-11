@@ -7,4 +7,5 @@ report.html
 build
 *.swp
 dist
+env
 MANIFEST

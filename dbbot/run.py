@@ -40,7 +40,7 @@ class DbBot(object):
             for xml_file in self._options.file_paths:
                 self._parser.xml_to_db(xml_file)
                 self._db.commit()
-        except DataError, message:
+        except DataError as message:
             sys.stderr.write('dbbot: error: Invalid XML: %s\n\n' % message)
             exit(1)
         finally:

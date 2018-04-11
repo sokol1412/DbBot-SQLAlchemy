@@ -156,7 +156,7 @@ Prints Input Files Required
 
 Prints ${option} Requires Argument
     Prints Usage
-    Should Contain  ${TEST OUTPUT}  ${program_name}: error: ${option} option requires an argument
+    Should Contain  ${TEST OUTPUT}  ${program_name}: error: ${option} option requires 1 argument
 
 Prints File ${filename} Not Exists
     Should Contain  ${TEST OUTPUT}  ${program_name}: error: file "${filename}" does not exist
