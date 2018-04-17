@@ -15,7 +15,7 @@ from __future__ import with_statement
 from datetime import datetime
 from hashlib import sha1
 from robot.api import ExecutionResult
-from sqlite3 import IntegrityError
+from sqlalchemy.exc import IntegrityError
 
 
 from dbbot import Logger
@@ -35,10 +35,10 @@ class RobotResultsParser(object):
         try:
             test_run_id = self._db.insert('test_runs', {
                 'hash': hash,
-                'imported_at': datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S.%f'),
+                'imported_at': datetime.utcnow(),
                 'source_file': test_run.source,
-                'started_at': self._format_robot_timestamp(test_run.suite.starttime) if test_run.suite.starttime else 'NULL',
-                'finished_at': self._format_robot_timestamp(test_run.suite.endtime) if test_run.suite.starttime else 'NULL'
+                'started_at': self._format_robot_timestamp(test_run.suite.starttime) if test_run.suite.starttime else None,
+                'finished_at': self._format_robot_timestamp(test_run.suite.endtime) if test_run.suite.starttime else None
             })
         except IntegrityError:
             test_run_id = self._db.fetch_id('test_runs', {
@@ -61,11 +61,11 @@ class RobotResultsParser(object):
         return hasher.hexdigest()
 
     def _parse_errors(self, errors, test_run_id):
-        self._db.insert_many_or_ignore('test_run_errors',
-            ('test_run_id', 'level', 'timestamp', 'content'),
-            [(test_run_id, error.level, self._format_robot_timestamp(error.timestamp), error.message)
-            for error in errors]
-        )
+        self._db.insert_many_or_ignore('test_run_errors', [
+            {'test_run_id': test_run_id, 'level': error.level,
+             'timestamp': self._format_robot_timestamp(error.timestamp),
+             'content': error.message} for error in errors
+        ])
 
     def _parse_statistics(self, statistics, test_run_id):
         self._parse_test_run_statistics(statistics.total, test_run_id)
@@ -162,14 +162,13 @@ class RobotResultsParser(object):
         })
 
     def _parse_tags(self, tags, test_id):
-        self._db.insert_many_or_ignore('tags', ('test_id', 'content'),
-            [(test_id, tag) for tag in tags]
-        )
+        self._db.insert_many_or_ignore('tags', [
+            {'test_id': test_id, 'content': tag} for tag in tags
+        ])
 
     def _parse_keywords(self, keywords, test_run_id, suite_id, test_id, keyword_id=None):
         if self._include_keywords:
-            [self._parse_keyword(keyword, test_run_id, suite_id, test_id, keyword_id)
-            for keyword in keywords]
+            [self._parse_keyword(keyword, test_run_id, suite_id, test_id, keyword_id) for keyword in keywords]
 
     def _parse_keyword(self, keyword, test_run_id, suite_id, test_id, keyword_id):
         try:
@@ -201,15 +200,16 @@ class RobotResultsParser(object):
         })
 
     def _parse_messages(self, messages, keyword_id):
-        self._db.insert_many_or_ignore('messages', ('keyword_id', 'level', 'timestamp', 'content'),
-            [(keyword_id, message.level, self._format_robot_timestamp(message.timestamp),
-            message.message) for message in messages]
-        )
+        self._db.insert_many_or_ignore('messages', [
+            {'keyword_id': keyword_id, 'level': message.level,
+             'timestamp': self._format_robot_timestamp(message.timestamp),
+             'content': message.message} for message in messages
+        ])
 
     def _parse_arguments(self, args, keyword_id):
-        self._db.insert_many_or_ignore('arguments', ('keyword_id', 'content'),
-            [(keyword_id, arg) for arg in args]
-        )
+        self._db.insert_many_or_ignore('arguments', [
+            {'keyword_id': keyword_id, 'content': arg} for arg in args
+        ])
 
     def _format_robot_timestamp(self, timestamp):
         return datetime.strptime(timestamp, '%Y%m%d %H:%M:%S.%f')

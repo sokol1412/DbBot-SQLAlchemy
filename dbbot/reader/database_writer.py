@@ -11,203 +11,188 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from dbbot import RobotDatabase
+from sqlalchemy import create_engine, Column, DateTime, ForeignKey, Integer, MetaData, Sequence, Table, Text, \
+    UniqueConstraint
+from sqlalchemy.sql import and_, select
+from sqlalchemy.exc import IntegrityError
+from dbbot import Logger
 
 
-class DatabaseWriter(RobotDatabase):
+class DatabaseWriter(object):
 
     def __init__(self, db_file_path, verbose_stream):
-        super(DatabaseWriter, self).__init__(db_file_path, verbose_stream)
+        self._verbose = Logger('DatabaseWriter', verbose_stream)
+        self._engine = create_engine('sqlite:///{path}'.format(path=db_file_path))
+        self._connection = self._engine.connect()
+        self._metadata = MetaData()
         self._init_schema()
 
     def _init_schema(self):
         self._verbose('- Initializing database schema')
-        self._create_table_test_runs()
-        self._create_table_test_run_status()
-        self._create_table_test_run_errors()
-        self._create_table_tag_status()
-        self._create_table_suites()
-        self._create_table_suite_status()
-        self._create_table_tests()
-        self._create_table_test_status()
-        self._create_table_keywords()
-        self._create_table_keyword_status()
-        self._create_table_messages()
-        self._create_table_tags()
-        self._create_table_arguments()
+        self.test_runs = self._create_table_test_runs()
+        self.test_run_status = self._create_table_test_run_status()
+        self.test_run_errors = self._create_table_test_run_errors()
+        self.tag_status = self._create_table_tag_status()
+        self.suites = self._create_table_suites()
+        self.suite_status = self._create_table_suite_status()
+        self.tests = self._create_table_tests()
+        self.test_status = self._create_table_test_status()
+        self.keywords = self._create_table_keywords()
+        self.keyword_status = self._create_table_keyword_status()
+        self.messages = self._create_table_messages()
+        self.tags = self._create_table_tags()
+        self.arguments = self._create_table_arguments()
+        self._metadata.create_all(bind=self._engine)
 
     def _create_table_test_runs(self):
-        self._create_table('test_runs', {
-            'hash': 'TEXT NOT NULL',
-            'imported_at': 'DATETIME NOT NULL',
-            'source_file': 'TEXT',
-            'started_at': 'DATETIME',
-            'finished_at': 'DATETIME',
-        }, ('hash',))
+        return self._create_table('test_runs', (
+            Column('hash', Text, nullable=False),
+            Column('imported_at', DateTime, nullable=False),
+            Column('source_file', Text),
+            Column('started_at', DateTime),
+            Column('finished_at', DateTime)
+        ), ('hash',))
 
     def _create_table_test_run_status(self):
-        self._create_table('test_run_status', {
-            'test_run_id': 'INTEGER NOT NULL REFERENCES test_runs',
-            'name': 'TEXT NOT NULL',
-            'elapsed': 'INTEGER',
-            'failed': 'INTEGER NOT NULL',
-            'passed': 'INTEGER NOT NULL'
-        }, ('test_run_id', 'name'))
+        return self._create_table('test_run_status', (
+            Column('test_run_id', Integer, ForeignKey('test_runs.id'), nullable=False),
+            Column('name', Text, nullable=False),
+            Column('elapsed', Integer),
+            Column('failed', Integer, nullable=False),
+            Column('passed', Integer, nullable=False)
+        ), ('test_run_id', 'name'))
 
     def _create_table_test_run_errors(self):
-        self._create_table('test_run_errors', {
-            'test_run_id': 'INTEGER NOT NULL REFERENCES test_runs',
-            'level': 'TEXT NOT NULL',
-            'timestamp': 'DATETIME NOT NULL',
-            'content': 'TEXT NOT NULL'
-        }, ('test_run_id', 'level', 'content'))
+        return self._create_table('test_run_errors', (
+            Column('test_run_id', Integer, ForeignKey('test_runs.id'), nullable=False),
+            Column('level', Text, nullable=False),
+            Column('timestamp', DateTime, nullable=False),
+            Column('content', Text, nullable=False)
+        ), ('test_run_id', 'level', 'content'))
 
     def _create_table_tag_status(self):
-        self._create_table('tag_status', {
-            'test_run_id': 'INTEGER NOT NULL REFERENCES test_runs',
-            'name': 'TEXT NOT NULL',
-            'critical': 'INTEGER NOT NULL',
-            'elapsed': 'INTEGER',
-            'failed': 'INTEGER NOT NULL',
-            'passed': 'INTEGER NOT NULL',
-        }, ('test_run_id', 'name'))
+        return self._create_table('tag_status', (
+            Column('test_run_id', Integer, ForeignKey('test_runs.id'), nullable=False),
+            Column('name', Text, nullable=False),
+            Column('critical', Integer, nullable=False),
+            Column('elapsed', Integer),
+            Column('failed', Integer, nullable=False),
+            Column('passed', Integer, nullable=False)
+        ), ('test_run_id', 'name'))
 
     def _create_table_suites(self):
-        self._create_table('suites', {
-            'suite_id': 'INTEGER REFERENCES suites',
-            'xml_id': 'TEXT NOT NULL',
-            'name': 'TEXT NOT NULL',
-            'source': 'TEXT',
-            'doc': 'TEXT'
-        }, ('name', 'source'))
+        return self._create_table('suites', (
+            Column('suite_id', Integer, ForeignKey('suites.id')),
+            Column('xml_id', Text, nullable=False),
+            Column('name', Text, nullable=False),
+            Column('source', Text),
+            Column('doc', Text)
+        ), ('name', 'source'))
 
     def _create_table_suite_status(self):
-        self._create_table('suite_status', {
-            'test_run_id': 'INTEGER NOT NULL REFERENCES test_runs',
-            'suite_id': 'INTEGER  NOT NULL REFERENCES suites',
-            'elapsed': 'INTEGER NOT NULL',
-            'failed': 'INTEGER NOT NULL',
-            'passed': 'INTEGER NOT NULL',
-            'status': 'TEXT NOT NULL'
-        }, ('test_run_id', 'suite_id'))
+        return self._create_table('suite_status', (
+            Column('test_run_id', Integer, ForeignKey('test_runs.id'), nullable=False),
+            Column('suite_id', Integer, ForeignKey('suites.id'), nullable=False),
+            Column('elapsed', Integer, nullable=False),
+            Column('failed', Integer, nullable=False),
+            Column('passed', Integer, nullable=False),
+            Column('status', Text, nullable=False)
+        ), ('test_run_id', 'suite_id'))
 
     def _create_table_tests(self):
-        self._create_table('tests', {
-            'suite_id': 'INTEGER NOT NULL REFERENCES suites',
-            'xml_id': 'TEXT NOT NULL',
-            'name': 'TEXT NOT NULL',
-            'timeout': 'TEXT',
-            'doc': 'TEXT'
-        }, ('suite_id', 'name'))
+        return self._create_table('tests', (
+            Column('suite_id', Integer, ForeignKey('suites.id'), nullable=False),
+            Column('xml_id', Text, nullable=False),
+            Column('name', Text, nullable=False),
+            Column('timeout', Text),
+            Column('doc', Text)
+        ), ('suite_id', 'name'))
 
     def _create_table_test_status(self):
-        self._create_table('test_status', {
-            'test_run_id': 'INTEGER NOT NULL REFERENCES test_runs',
-            'test_id': 'INTEGER  NOT NULL REFERENCES tests',
-            'status': 'TEXT NOT NULL',
-            'elapsed': 'INTEGER NOT NULL'
-        }, ('test_run_id', 'test_id'))
+        return self._create_table('test_status', (
+            Column('test_run_id', Integer, ForeignKey('test_runs.id'), nullable=False),
+            Column('test_id', Integer, ForeignKey('tests.id'), nullable=False),
+            Column('status', Text, nullable=False),
+            Column('elapsed', Integer, nullable=False)
+        ), ('test_run_id', 'test_id'))
 
     def _create_table_keywords(self):
-        self._create_table('keywords', {
-            'suite_id': 'INTEGER REFERENCES suites',
-            'test_id': 'INTEGER REFERENCES tests',
-            'keyword_id': 'INTEGER REFERENCES keywords',
-            'name': 'TEXT NOT NULL',
-            'type': 'TEXT NOT NULL',
-            'timeout': 'TEXT',
-            'doc': 'TEXT'
-        }, ('name', 'type'))
+        return self._create_table('keywords', (
+            Column('keywords', Integer, ForeignKey('suites.id')),
+            Column('test_id', Integer, ForeignKey('tests.id')),
+            Column('keyword_id', Integer, ForeignKey('keywords.id')),
+            Column('name', Text, nullable=False),
+            Column('type', Text, nullable=False),
+            Column('timeout', Text),
+            Column('doc', Text)
+        ), ('name', 'type'))
 
     def _create_table_keyword_status(self):
-        self._create_table('keyword_status', {
-            'test_run_id': 'INTEGER NOT NULL REFERENCES test_runs',
-            'keyword_id': 'INTEGER NOT NULL REFERENCES keywords',
-            'status': 'TEXT NOT NULL',
-            'elapsed': 'INTEGER NOT NULL'
-        })
+        return self._create_table('keyword_status', (
+            Column('test_run_id', Integer, ForeignKey('test_runs.id'), nullable=False),
+            Column('keyword_id', Integer, ForeignKey('keywords.id'), nullable=False),
+            Column('status', Text, nullable=False),
+            Column('elapsed', Integer, nullable=False)
+        ))
 
     def _create_table_messages(self):
-        self._create_table('messages', {
-            'keyword_id': 'INTEGER NOT NULL REFERENCES keywords',
-            'level': 'TEXT NOT NULL',
-            'timestamp': 'DATETIME NOT NULL',
-            'content': 'TEXT NOT NULL'
-        }, ('keyword_id', 'level', 'content'))
+        return self._create_table('messages', (
+            Column('keyword_id', Integer, ForeignKey('keywords.id'), nullable=False),
+            Column('level', Text, nullable=False),
+            Column('timestamp', DateTime, nullable=False),
+            Column('content', Text, nullable=False)
+        ), ('keyword_id', 'level', 'content'))
 
     def _create_table_tags(self):
-        self._create_table('tags', {
-            'test_id': 'INTEGER NOT NULL REFERENCES tests',
-            'content': 'TEXT NOT NULL'
-        }, ('test_id', 'content'))
+        return self._create_table('tags', (
+            Column('test_id', Integer, ForeignKey('tests.id'), nullable=False),
+            Column('content', Text, nullable=False)
+        ), ('test_id', 'content'))
 
     def _create_table_arguments(self):
-        self._create_table('arguments', {
-            'keyword_id': 'INTEGER NOT NULL REFERENCES keywords',
-            'content': 'TEXT NOT NULL'
-        }, ('keyword_id', 'content'))
+        return self._create_table('arguments', (
+            Column('keyword_id', Integer, ForeignKey('keywords.id'), nullable=False),
+            Column('content', Text, nullable=False)
+        ), ('keyword_id', 'content'))
 
     def _create_table(self, table_name, columns, unique_columns=()):
-        definitions = ['id INTEGER PRIMARY KEY']
-        for column_name, properties in columns.items():
-            definitions.append('%s %s' % (column_name, properties))
+        args = [Column('id', Integer, Sequence('{table}_id_seq'.format(table=table_name)), primary_key=True)]
+        args.extend(columns)
         if unique_columns:
-            unique_column_names = ', '.join(unique_columns)
-            definitions.append('CONSTRAINT unique_%s UNIQUE (%s)' % (
-                table_name, unique_column_names)
-            )
-        sql_statement = 'CREATE TABLE IF NOT EXISTS %s (%s)' % (table_name, ', '.join(definitions))
-        self._connection.execute(sql_statement)
-
-    def rename_table(self, old_name, new_name):
-        sql_statement = 'ALTER TABLE %s RENAME TO %s' % (old_name, new_name)
-        self._connection.execute(sql_statement)
-
-    def drop_table(self, table_name):
-        sql_statement = 'DROP TABLE %s' % table_name
-        self._connection.execute(sql_statement)
-
-    def copy_table(self, from_table, to_table, columns_to_copy):
-        column_names = ', '.join(columns_to_copy)
-        sql_statement = 'INSERT INTO %s(%s) SELECT %s FROM %s' % (
-            to_table,
-            column_names,
-            column_names,
-            from_table
-        )
-        self._connection.execute(sql_statement)
+            args.append(UniqueConstraint(*unique_columns, name='unique_{table}'.format(table=table_name)))
+        return Table(table_name, self._metadata, *args)
 
     def fetch_id(self, table_name, criteria):
-        sql_statement = 'SELECT id FROM %s WHERE ' % table_name
-        sql_statement += ' AND '.join('%s=?' % key for key in criteria.keys())
-        res = self._connection.execute(sql_statement, list(criteria.values())).fetchone()
-        if not res:
+        table = getattr(self, table_name)
+        sql_statement = select([table.c.id]).where(
+            and_(*(getattr(table.c, key) == value for key, value in criteria.items()))
+        )
+        result = self._connection.execute(sql_statement).first()
+        if not result:
             raise Exception('Query did not yield id, even though it should have.'
                             '\nSQL statement was:\n%s\nArguments were:\n%s' % (sql_statement, list(criteria.values())))
-        return res[0]
+        return result['id']
 
     def insert(self, table_name, criteria):
-        sql_statement = self._format_insert_statement(table_name, criteria.keys())
-        cursor = self._connection.execute(sql_statement, list(criteria.values()))
-        return cursor.lastrowid
+        sql_statement = getattr(self, table_name).insert()
+        result = self._connection.execute(sql_statement, **criteria)
+        return result.inserted_primary_key[0]
 
     def insert_or_ignore(self, table_name, criteria):
-        sql_statement = self._format_insert_statement(table_name, criteria.keys(), 'IGNORE')
-        self._connection.execute(sql_statement, list(criteria.values()))
+        try:
+            self.insert(table_name, criteria)
+        except IntegrityError:
+            self._verbose('Failed insert to {table} with values {values}'.format(table=table_name,
+                                                                                 values=list(criteria.values())))
 
-    def insert_many_or_ignore(self, table_name, column_names, values):
-        sql_statement = self._format_insert_statement(table_name, column_names, 'IGNORE')
-        self._connection.executemany(sql_statement, values)
+    def insert_many_or_ignore(self, table_name, items):
+        try:
+            sql_statement = getattr(self, table_name).insert()
+            self._connection.execute(sql_statement, items)
+        except IntegrityError:
+            self._verbose('Failed insert to {table} with values {values}'.format(table=table_name,
+                                                                                 values=items))
 
-    def _format_insert_statement(self, table_name, column_names, on_conflict='ABORT'):
-        return 'INSERT OR %s INTO %s (%s) VALUES (%s)' % (
-            on_conflict,
-            table_name,
-            ','.join(column_names),
-            ','.join('?' * len(column_names))
-        )
-
-    def commit(self):
-        self._verbose('- Committing changes into database')
-        self._connection.commit()
-
+    def close(self):
+        self._verbose('- Closing database connection')
+        self._connection.close()

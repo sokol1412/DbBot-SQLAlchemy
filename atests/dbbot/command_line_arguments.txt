@@ -165,7 +165,7 @@ Prints Parse Error In ${filename}
     Should Contain    ${TEST OUTPUT}    dbbot: error: Invalid XML: Reading XML source '${filename}' failed:
 
 Is Verbose
-    Should Contain    ${TEST OUTPUT}  Database |
+    Should Contain    ${TEST OUTPUT}  DatabaseWriter |
     Should Contain    ${TEST OUTPUT}  Parser   |
 
 Run With ${arguments}
