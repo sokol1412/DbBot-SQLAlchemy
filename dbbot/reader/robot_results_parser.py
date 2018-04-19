@@ -31,14 +31,14 @@ class RobotResultsParser(object):
     def xml_to_db(self, xml_file):
         self._verbose('- Parsing %s' % xml_file)
         test_run = ExecutionResult(xml_file, include_keywords=self._include_keywords)
-        hash = self._hash(xml_file)
+        hash_string = self._hash(xml_file)
         try:
             test_run_id = self._db.insert('test_runs', {
-                'hash': hash,
+                'hash': hash_string,
                 'imported_at': datetime.utcnow(),
                 'source_file': test_run.source,
-                'started_at': self._format_robot_timestamp(test_run.suite.starttime) if test_run.suite.starttime else None,
-                'finished_at': self._format_robot_timestamp(test_run.suite.endtime) if test_run.suite.starttime else None
+                'started_at': self._format_robot_timestamp(test_run.suite.starttime),
+                'finished_at': self._format_robot_timestamp(test_run.suite.endtime)
             })
         except IntegrityError:
             test_run_id = self._db.fetch_id('test_runs', {
@@ -50,7 +50,8 @@ class RobotResultsParser(object):
         self._parse_statistics(test_run.statistics, test_run_id)
         self._parse_suite(test_run.suite, test_run_id)
 
-    def _hash(self, xml_file):
+    @staticmethod
+    def _hash(xml_file):
         block_size = 68157440
         hasher = sha1()
         with open(xml_file, 'rb') as f:
@@ -211,5 +212,6 @@ class RobotResultsParser(object):
             {'keyword_id': keyword_id, 'content': arg} for arg in args
         ])
 
-    def _format_robot_timestamp(self, timestamp):
-        return datetime.strptime(timestamp, '%Y%m%d %H:%M:%S.%f')
+    @staticmethod
+    def _format_robot_timestamp(timestamp):
+        return datetime.strptime(timestamp, '%Y%m%d %H:%M:%S.%f') if timestamp else None

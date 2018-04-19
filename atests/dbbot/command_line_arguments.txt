@@ -60,7 +60,7 @@ With an invalid XML file
 
 With --database and database name
     [Setup]  Remove Database  ${own_database}
-    ${rc}  ${output}=  Run With --database=${own_database} ${valid_output}
+    ${rc}  ${output}=  Run With --database=${own_database_url} ${valid_output}
     Should Create Database  ${own_database}
     Should Not Create Default Database
     Exits With Success
@@ -75,7 +75,7 @@ With --database and no database name
 
 With -b and database name
     [Setup]  Remove Database  ${own_database}
-    ${rc}  ${output}=  Run With -b ${own_database} ${valid_output}
+    ${rc}  ${output}=  Run With -b ${own_database_url} ${valid_output}
     Should Create Database  ${own_database}
     Should Not Create Default Database
     Exits With Success

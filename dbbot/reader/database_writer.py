@@ -20,9 +20,9 @@ from dbbot import Logger
 
 class DatabaseWriter(object):
 
-    def __init__(self, db_file_path, verbose_stream):
+    def __init__(self, db_url, verbose_stream):
         self._verbose = Logger('DatabaseWriter', verbose_stream)
-        self._engine = create_engine('sqlite:///{path}'.format(path=db_file_path))
+        self._engine = create_engine(db_url)
         self._connection = self._engine.connect()
         self._metadata = MetaData()
         self._init_schema()
@@ -187,7 +187,7 @@ class DatabaseWriter(object):
 
     def insert_many_or_ignore(self, table_name, items):
         try:
-            sql_statement = getattr(self, table_name).insert()
+            sql_statement = getattr(self, table_name).insert().prefix_with('OR IGNORE')
             self._connection.execute(sql_statement, items)
         except IntegrityError:
             self._verbose('Failed insert to {table} with values {values}'.format(table=table_name,

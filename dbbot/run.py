@@ -22,18 +22,21 @@ from robot.errors import DataError
 
 class DbBot(object):
 
+    DRY_RUN_DB_URL = 'sqlite:///:memory:'
+
     def __init__(self):
         self._options = ReaderOptions()
         verbose_stream = sys.stdout if self._options.be_verbose else None
-        # '' for temporary database i.e. deleted after the connection is closed
-        # see: http://www.sqlite.org/inmemorydb.html, section 'Temporary Databases'
-        database_path = '' if self._options.dry_run else self._options.db_file_path
-        self._db = DatabaseWriter(database_path, verbose_stream)
+        database_url = self._resolve_db_url()
+        self._db = DatabaseWriter(database_url, verbose_stream)
         self._parser = RobotResultsParser(
             self._options.include_keywords,
             self._db,
             verbose_stream
         )
+
+    def _resolve_db_url(self):
+        return self.DRY_RUN_DB_URL if self._options.dry_run else self._options.db_url
 
     def run(self):
         try:

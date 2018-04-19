@@ -1,6 +1,7 @@
 *** Variables ***
 ${default_database}   robot_results.db
 ${own_database}       my_database.db
+${own_database_url}   sqlite:///${own_database}
 ${program name}=    run.py
 ${program_path}=    ${CURDIR}${/}..${/}..${/}dbbot${/}${program name}
 

@@ -15,7 +15,8 @@ from optparse import OptionParser
 from os.path import exists
 
 
-DEFAULT_DB_NAME = 'robot_results.db'
+DEFAULT_DB_URL = 'sqlite:///robot_results.db'
+
 
 class ReaderOptions(object):
 
@@ -31,7 +32,7 @@ class ReaderOptions(object):
                                  'dest': 'dry_run',
                                  'help': 'do everything except store results into disk'}),
 
-            ('-k', '--also-keywords', {'action':'store_true',
+            ('-k', '--also-keywords', {'action': 'store_true',
                                        'default': False,
                                        'dest': 'include_keywords',
                                        'help': 'parse also suites\' and tests\' keywords'}),
@@ -41,9 +42,9 @@ class ReaderOptions(object):
                                  'dest': 'be_verbose',
                                  'help': 'be verbose about the operation'}),
 
-            ('-b', '--database', {'dest': 'db_file_path',
-                                  'default': DEFAULT_DB_NAME,
-                                  'help': 'path to the SQLite database for test run results'})
+            ('-b', '--database', {'dest': 'db_url',
+                                  'default': DEFAULT_DB_URL,
+                                  'help': 'SQLAlchemy Database URL'})
         ]
         for option in options:
             self._parser.add_option(option[0], option[1], **option[2])
@@ -65,8 +66,8 @@ class ReaderOptions(object):
         exit(1)
 
     @property
-    def db_file_path(self):
-        return self._options.db_file_path
+    def db_url(self):
+        return self._options.db_url
 
     @property
     def be_verbose(self):
