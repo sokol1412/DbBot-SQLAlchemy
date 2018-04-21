@@ -185,14 +185,6 @@ class DatabaseWriter(object):
             self._verbose('Failed insert to {table} with values {values}'.format(table=table_name,
                                                                                  values=list(criteria.values())))
 
-    def insert_many_or_ignore(self, table_name, items):
-        try:
-            sql_statement = getattr(self, table_name).insert().prefix_with('OR IGNORE')
-            self._connection.execute(sql_statement, items)
-        except IntegrityError:
-            self._verbose('Failed insert to {table} with values {values}'.format(table=table_name,
-                                                                                 values=items))
-
     def close(self):
         self._verbose('- Closing database connection')
         self._connection.close()

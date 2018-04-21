@@ -62,11 +62,12 @@ class RobotResultsParser(object):
         return hasher.hexdigest()
 
     def _parse_errors(self, errors, test_run_id):
-        self._db.insert_many_or_ignore('test_run_errors', [
-            {'test_run_id': test_run_id, 'level': error.level,
-             'timestamp': self._format_robot_timestamp(error.timestamp),
-             'content': error.message} for error in errors
-        ])
+        for error in errors:
+            self._db.insert_or_ignore('test_run_errors', {
+                'test_run_id': test_run_id, 'level': error.level,
+                'timestamp': self._format_robot_timestamp(error.timestamp),
+                'content': error.message
+            })
 
     def _parse_statistics(self, statistics, test_run_id):
         self._parse_test_run_statistics(statistics.total, test_run_id)
@@ -84,7 +85,7 @@ class RobotResultsParser(object):
         self._db.insert_or_ignore('tag_status', {
             'test_run_id': test_run_id,
             'name': stat.name,
-            'critical': stat.critical,
+            'critical': int(stat.critical),
             'elapsed': getattr(stat, 'elapsed', None),
             'failed': stat.failed,
             'passed': stat.passed
@@ -163,9 +164,8 @@ class RobotResultsParser(object):
         })
 
     def _parse_tags(self, tags, test_id):
-        self._db.insert_many_or_ignore('tags', [
-            {'test_id': test_id, 'content': tag} for tag in tags
-        ])
+        for tag in tags:
+            self._db.insert_or_ignore('tags', {'test_id': test_id, 'content': tag})
 
     def _parse_keywords(self, keywords, test_run_id, suite_id, test_id, keyword_id=None):
         if self._include_keywords:
@@ -201,16 +201,16 @@ class RobotResultsParser(object):
         })
 
     def _parse_messages(self, messages, keyword_id):
-        self._db.insert_many_or_ignore('messages', [
-            {'keyword_id': keyword_id, 'level': message.level,
-             'timestamp': self._format_robot_timestamp(message.timestamp),
-             'content': message.message} for message in messages
-        ])
+        for message in messages:
+            self._db.insert_or_ignore('messages', {
+                'keyword_id': keyword_id, 'level': message.level,
+                'timestamp': self._format_robot_timestamp(message.timestamp),
+                'content': message.message
+            })
 
     def _parse_arguments(self, args, keyword_id):
-        self._db.insert_many_or_ignore('arguments', [
-            {'keyword_id': keyword_id, 'content': arg} for arg in args
-        ])
+        for arg in args:
+            self._db.insert_or_ignore('arguments', {'keyword_id': keyword_id, 'content': arg})
 
     @staticmethod
     def _format_robot_timestamp(timestamp):
