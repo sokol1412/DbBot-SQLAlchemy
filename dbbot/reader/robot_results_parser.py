@@ -66,7 +66,8 @@ class RobotResultsParser(object):
             self._db.insert_or_ignore('test_run_errors', {
                 'test_run_id': test_run_id, 'level': error.level,
                 'timestamp': self._format_robot_timestamp(error.timestamp),
-                'content': error.message
+                'content': error.message,
+                'content_hash': self._string_hash(error.message)
             })
 
     def _parse_statistics(self, statistics, test_run_id):
@@ -205,13 +206,22 @@ class RobotResultsParser(object):
             self._db.insert_or_ignore('messages', {
                 'keyword_id': keyword_id, 'level': message.level,
                 'timestamp': self._format_robot_timestamp(message.timestamp),
-                'content': message.message
+                'content': message.message,
+                'content_hash': self._string_hash(message.message)
             })
 
     def _parse_arguments(self, args, keyword_id):
         for arg in args:
-            self._db.insert_or_ignore('arguments', {'keyword_id': keyword_id, 'content': arg})
+            self._db.insert_or_ignore('arguments', {
+                'keyword_id': keyword_id,
+                'content': arg,
+                'content_hash': self._string_hash(arg)
+            })
 
     @staticmethod
     def _format_robot_timestamp(timestamp):
         return datetime.strptime(timestamp, '%Y%m%d %H:%M:%S.%f') if timestamp else None
+
+    @staticmethod
+    def _string_hash(string):
+        return sha1(string.encode()).hexdigest() if string else None

@@ -11,7 +11,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from sqlalchemy import create_engine, Column, DateTime, ForeignKey, Integer, MetaData, Sequence, Table, Text, \
+from sqlalchemy import create_engine, Column, DateTime, ForeignKey, Integer, MetaData, Sequence, String, Table, Text, \
     UniqueConstraint
 from sqlalchemy.sql import and_, select
 from sqlalchemy.exc import IntegrityError
@@ -46,9 +46,9 @@ class DatabaseWriter(object):
 
     def _create_table_test_runs(self):
         return self._create_table('test_runs', (
-            Column('hash', Text, nullable=False),
+            Column('hash', String(64), nullable=False),
             Column('imported_at', DateTime, nullable=False),
-            Column('source_file', Text),
+            Column('source_file', String(1024)),
             Column('started_at', DateTime),
             Column('finished_at', DateTime)
         ), ('hash',))
@@ -56,7 +56,7 @@ class DatabaseWriter(object):
     def _create_table_test_run_status(self):
         return self._create_table('test_run_status', (
             Column('test_run_id', Integer, ForeignKey('test_runs.id'), nullable=False),
-            Column('name', Text, nullable=False),
+            Column('name', String(256), nullable=False),
             Column('elapsed', Integer),
             Column('failed', Integer, nullable=False),
             Column('passed', Integer, nullable=False)
@@ -65,15 +65,16 @@ class DatabaseWriter(object):
     def _create_table_test_run_errors(self):
         return self._create_table('test_run_errors', (
             Column('test_run_id', Integer, ForeignKey('test_runs.id'), nullable=False),
-            Column('level', Text, nullable=False),
+            Column('level', String(64), nullable=False),
             Column('timestamp', DateTime, nullable=False),
-            Column('content', Text, nullable=False)
-        ), ('test_run_id', 'level', 'content'))
+            Column('content', Text, nullable=False),
+            Column('content_hash', String(64), nullable=False)
+        ), ('test_run_id', 'level', 'content_hash'))
 
     def _create_table_tag_status(self):
         return self._create_table('tag_status', (
             Column('test_run_id', Integer, ForeignKey('test_runs.id'), nullable=False),
-            Column('name', Text, nullable=False),
+            Column('name', String(256), nullable=False),
             Column('critical', Integer, nullable=False),
             Column('elapsed', Integer),
             Column('failed', Integer, nullable=False),
@@ -83,9 +84,9 @@ class DatabaseWriter(object):
     def _create_table_suites(self):
         return self._create_table('suites', (
             Column('suite_id', Integer, ForeignKey('suites.id')),
-            Column('xml_id', Text, nullable=False),
-            Column('name', Text, nullable=False),
-            Column('source', Text),
+            Column('xml_id', String(64), nullable=False),
+            Column('name', String(256), nullable=False),
+            Column('source', String(1024)),
             Column('doc', Text)
         ), ('name', 'source'))
 
@@ -96,15 +97,15 @@ class DatabaseWriter(object):
             Column('elapsed', Integer, nullable=False),
             Column('failed', Integer, nullable=False),
             Column('passed', Integer, nullable=False),
-            Column('status', Text, nullable=False)
+            Column('status', String(4), nullable=False)
         ), ('test_run_id', 'suite_id'))
 
     def _create_table_tests(self):
         return self._create_table('tests', (
             Column('suite_id', Integer, ForeignKey('suites.id'), nullable=False),
-            Column('xml_id', Text, nullable=False),
-            Column('name', Text, nullable=False),
-            Column('timeout', Text),
+            Column('xml_id', String(64), nullable=False),
+            Column('name', String(256), nullable=False),
+            Column('timeout', String(64)),
             Column('doc', Text)
         ), ('suite_id', 'name'))
 
@@ -112,7 +113,7 @@ class DatabaseWriter(object):
         return self._create_table('test_status', (
             Column('test_run_id', Integer, ForeignKey('test_runs.id'), nullable=False),
             Column('test_id', Integer, ForeignKey('tests.id'), nullable=False),
-            Column('status', Text, nullable=False),
+            Column('status', String(4), nullable=False),
             Column('elapsed', Integer, nullable=False)
         ), ('test_run_id', 'test_id'))
 
@@ -121,9 +122,9 @@ class DatabaseWriter(object):
             Column('keywords', Integer, ForeignKey('suites.id')),
             Column('test_id', Integer, ForeignKey('tests.id')),
             Column('keyword_id', Integer, ForeignKey('keywords.id')),
-            Column('name', Text, nullable=False),
-            Column('type', Text, nullable=False),
-            Column('timeout', Text),
+            Column('name', String(256), nullable=False),
+            Column('type', String(64), nullable=False),
+            Column('timeout', String(4)),
             Column('doc', Text)
         ), ('name', 'type'))
 
@@ -131,29 +132,31 @@ class DatabaseWriter(object):
         return self._create_table('keyword_status', (
             Column('test_run_id', Integer, ForeignKey('test_runs.id'), nullable=False),
             Column('keyword_id', Integer, ForeignKey('keywords.id'), nullable=False),
-            Column('status', Text, nullable=False),
+            Column('status', String(4), nullable=False),
             Column('elapsed', Integer, nullable=False)
         ))
 
     def _create_table_messages(self):
         return self._create_table('messages', (
             Column('keyword_id', Integer, ForeignKey('keywords.id'), nullable=False),
-            Column('level', Text, nullable=False),
+            Column('level', String(64), nullable=False),
             Column('timestamp', DateTime, nullable=False),
-            Column('content', Text, nullable=False)
-        ), ('keyword_id', 'level', 'content'))
+            Column('content', Text, nullable=False),
+            Column('content_hash', String(64), nullable=False)
+        ), ('keyword_id', 'level', 'content_hash'))
 
     def _create_table_tags(self):
         return self._create_table('tags', (
             Column('test_id', Integer, ForeignKey('tests.id'), nullable=False),
-            Column('content', Text, nullable=False)
+            Column('content', String(256), nullable=False)
         ), ('test_id', 'content'))
 
     def _create_table_arguments(self):
         return self._create_table('arguments', (
             Column('keyword_id', Integer, ForeignKey('keywords.id'), nullable=False),
-            Column('content', Text, nullable=False)
-        ), ('keyword_id', 'content'))
+            Column('content', Text, nullable=False),
+            Column('content_hash', String(64), nullable=False)
+        ), ('keyword_id', 'content_hash'))
 
     def _create_table(self, table_name, columns, unique_columns=()):
         args = [Column('id', Integer, Sequence('{table}_id_seq'.format(table=table_name)), primary_key=True)]
