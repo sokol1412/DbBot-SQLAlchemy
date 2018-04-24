@@ -1,26 +1,38 @@
-DbBot
+DbBot-SQLAlchemy
 =====
 
 DbBot is a Python script to serialize `Robot Framework`_  output files into
 a SQLite database. This way the future `Robot Framework`_ related tools and
 plugins will have a unified storage for the test run results.
 
+DbBot-SQLAlchemy is a fork of DbBot project that is using SQLAlchemy in order
+to store test run results in any of the major supported database systems.
+
+The goal is to support the following databases:
+-  PostgreSQL
+-  MySQL
+-  Oracle
+-  MS SQL
+-  SQLite
+
 Requirements
 ------------
+DbBot-SQLAlchemy is tested on
 
--  `Python`__ 2.6 or newer installed
--  `Robot Framework`_ 2.7 or newer installed
+-  `Python`__ 3.5+
+-  `Robot Framework`_ 3.0+
+-  `SQLAlchemy`_ 1.2+
 
-`Robot Framework`_ version 2.7.4 or later is recommended as versions prior to
-2.7.4 do not support storing total elapsed time for test runs or tags.
+It may (though it is not guaranteed) work with older versions of dependencies.
 
 How it works
 ------------
 
 The script takes one or more `output.xml` files as input, initializes the
-database schema, and stores the respective results into a database
-(`robot\_results.db` by default, can be changed with options `-b` or
-`--database`). If database file is already existing, it will insert the new 
+database schema, and stores the respective results into a SQLite database
+(`robot\_results.db` by default, can be changed by specifying SQLAlchemy
+ database URL with options `-b` or `--database`).
+If database schema is already existing, it will insert the new
 results into that database.
 
 Installation
@@ -30,7 +42,7 @@ This tool is installed with pip with command:
 
 ::
 
-    $ pip install dbbot
+    $ pip install dbbot-sqlalchemy
 
 Alternatively you can download the `source distribution`__, extract it and
 install using:
@@ -56,13 +68,13 @@ Typical usage with a single output.xml file:
 
 ::
 
-    python -m dbbot.run atest/testdata/one_suite/output.xml
+    python -m dbbot.run atests/testdata/one_suite/test_output.xml
 
 If the database does not already exist, it's created. Otherwise the test
 results are just inserted into the existing database. Only new results are
 inserted.
 
-The default database is a file named `robot_results.db`.
+The default database is SQLite database named `robot_results.db`.
 
 Additional options are:
 
@@ -75,8 +87,8 @@ Additional options are:
 | `-v`              | `--verbose`               | Print output to the      |
 |                   |                           | console.                 |
 +-------------------+---------------------------+--------------------------+
-| `-b DB_FILE_PATH` | `--database=DB_FILE_PATH` | SQLite database for test |
-|                   |                           | run results              |
+| `-b DB_URL`       | `--database=DB_URL`       | SQLAlchemy database URL  |
+|                   |                           | for test run results     |
 +-------------------+---------------------------+--------------------------+
 | `-d`              | `--dry-run`               | Do everything except     |
 |                   |                           | store the results.       |
@@ -87,19 +99,20 @@ Specifying custom database name:
 
 ::
 
-    $ python -m dbbot.run  -b my_own_database.db atest/testdata/one_suite/output.xml
+    $ python -m dbbot.run  -b sqlite:///my_own_database.db atests/testdata/one_suite/test_output.xml
+    $ python -m dbbot.run  -b postgresql://postgres:postgres@localhost:5432/postgres atests/testdata/one_suite/test_output.xml
 
 Parsing test run results with keywords and related data included:
 
 ::
 
-    python -m dbbot.run -k atest/testdata/one_suite/output.xml
+    python -m dbbot.run -k atests/testdata/one_suite/test_output.xml
 
 Giving multiple test run result files at the same time:
 
 ::
 
-    python -m dbbot.run atest/testdata/one_suite/output.xml atest/testdata/one_suite/output_latter.xml
+    python -m dbbot.run atests/testdata/one_suite/test_output.xml atests/testdata/one_suite/output_latter.xml
 
 Database
 --------
@@ -129,18 +142,6 @@ scripts.
 
 For information about the database schema, see `doc/robot_database.md`__.
 
-Migrating from Robot Framework 2.7 to 2.8
------------------------------------------
-
-In Robot Framework 2.8, output.xml has changed slightly. Due this, the
-databases created with 2.7 need to migrated to be 2.8 compatible.
-
-To migrate the existing database, issue the following script:
-
-::
-
-    python tools/migrate27to28 -b <path_to_robot_results_db>
-
 Use case example: Most failing tests
 ------------------------------------
 
@@ -168,9 +169,10 @@ DbBot is released under the `Apache License, Version 2.0`__.
 See LICENSE.TXT for details.
 
 __ https://www.python.org/
-__ https://pypi.python.org/pypi/dbbot
-__ https://github.com/robotframework/DbBot/blob/master/doc/robot_database.md
+__ https://pypi.python.org/pypi/dbbot-sqlalchemy
+__ https://github.com/pbylicki/DbBot-SQLAlchemy/blob/master/doc/robot_database.md
 __ http://www.tldrlegal.com/license/apache-license-2.0
 .. _`Robot Framework`: http://www.robotframework.org
 .. _`pip`: http://www.pip-installer.org
 .. _`sqlite3`: https://www.sqlite.org/sqlite.html
+.. _`SQLAlchemy`: http://www.sqlalchemy.org
