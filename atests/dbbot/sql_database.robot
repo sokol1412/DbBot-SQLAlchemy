@@ -1,7 +1,7 @@
 *** Settings ***
 Library           OperatingSystem
 Library           ../libraries/RobotSqliteDatabase.py
-Resource          ../resources/database.txt
+Resource          ../resources/database.robot
 Test Teardown     Disconnect And Cleanup
 
 *** Variables ***

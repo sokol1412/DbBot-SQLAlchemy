@@ -1,6 +1,6 @@
 *** Settings ***
 Library   OperatingSystem
-Resource  ../resources/database.txt
+Resource  ../resources/database.robot
 
 *** Variables ***
 ${valid_output}       ${CURDIR}${/}..${/}testdata${/}one_suite${/}test_output.xml

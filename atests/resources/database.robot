@@ -4,6 +4,7 @@ ${own_database}       my_database.db
 ${own_database_url}   sqlite:///${own_database}
 ${program name}=    run.py
 ${program_path}=    ${CURDIR}${/}..${/}..${/}dbbot${/}${program name}
+#${program_path}=    python -m dbbot.run
 
 *** Keywords ***
 Should Create Database
