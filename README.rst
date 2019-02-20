@@ -1,5 +1,8 @@
 DbBot-SQLAlchemy
-=====
+================
+
+.. image:: https://travis-ci.org/pbylicki/DbBot-SQLAlchemy.svg?branch=master
+    :target: https://travis-ci.org/pbylicki/DbBot-SQLAlchemy
 
 DbBot is a Python script to serialize `Robot Framework`_  output files into
 a SQLite database. This way the future `Robot Framework`_ related tools and
@@ -9,6 +12,7 @@ DbBot-SQLAlchemy is a fork of DbBot project that is using SQLAlchemy in order
 to store test run results in any of the major supported database systems.
 
 The goal is to support the following databases:
+
 -  PostgreSQL
 -  MySQL
 -  Oracle
@@ -31,7 +35,7 @@ How it works
 The script takes one or more `output.xml` files as input, initializes the
 database schema, and stores the respective results into a SQLite database
 (`robot\_results.db` by default, can be changed by specifying SQLAlchemy
- database URL with options `-b` or `--database`).
+database URL with options `-b` or `--database`).
 If database schema is already existing, it will insert the new
 results into that database.
 
