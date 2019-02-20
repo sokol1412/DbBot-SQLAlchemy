@@ -1,14 +1,14 @@
 *** Settings ***
 Library           OperatingSystem
 Library           ../libraries/RobotSqliteDatabase.py
-Resource          ../resources/database.txt
+Resource          ../resources/database.robot
 Test Teardown     Disconnect And Cleanup
 
 *** Variables ***
 
-${test_run}                 ${CURDIR}${/}..${/}testdata${/}one_suite${/}test_output.xml
-${latter_test_run}          ${CURDIR}${/}..${/}testdata${/}one_suite${/}output_latter.xml
-${test_run_with_subsuites}  ${CURDIR}${/}..${/}testdata${/}multiple${/}test_output.xml
+${test_run}                 ./testdata/one_suite/test_output.xml
+${latter_test_run}          ./testdata/one_suite/output_latter.xml
+${test_run_with_subsuites}  ./testdata/multiple/test_output.xml
 
 *** Test Cases ***
 
