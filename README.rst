@@ -105,6 +105,9 @@ Specifying custom database name:
 
     $ python -m dbbot.run  -b sqlite:///my_own_database.db atests/testdata/one_suite/test_output.xml
     $ python -m dbbot.run  -b postgresql://postgres:postgres@localhost:5432/postgres atests/testdata/one_suite/test_output.xml
+    $ python -m dbbot.run  -b mysql+pymysql://user:password@localhost:3306/robot atests/testdata/one_suite/test_output.xml
+
+    If the password contains '@', You should replace it with urlencode, example: '%40'
 
 Parsing test run results with keywords and related data included:
 
