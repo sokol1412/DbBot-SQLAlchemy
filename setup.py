@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
+import re
 from distutils.core import setup
 from os.path import abspath, dirname, join
-import re
 
 NAME = 'dbbot-sqlalchemy'
 CLASSIFIERS = """
@@ -21,10 +21,8 @@ with open(join(CURDIR, 'README.rst')) as f:
 setup(
     name             = NAME,
     version          = VERSION,
-    author           = 'Robot Framework Developers, Pawel Bylicki',
-    author_email     = 'robotframework@gmail.com',
-    url              = 'https://github.com/pbylicki/DbBot-SQLAlchemy',
-    download_url     = 'https://pypi.python.org/pypi/dbbot-sqlalchemy',
+    author           = 'Robot Framework Developers, Pawel Bylicki, Wadim Sokolowski, Mateusz Kotas',
+    url              = 'https://github.com/sokol1412/DbBot-SQLAlchemy',
     license          = 'Apache License 2.0',
     description      = 'A tool for inserting Robot Framework test run '
                        'results into SQL database using SQLAlchemy.',
@@ -33,5 +31,5 @@ setup(
     platforms        = 'any',
     classifiers      = CLASSIFIERS,
     packages         = ['dbbot', 'dbbot.reader'],
-    install_requires = ['robotframework', 'sqlalchemy']
+    requires = ['robotframework', 'sqlalchemy']
 )

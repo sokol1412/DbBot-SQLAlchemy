@@ -12,5 +12,4 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 from .database_writer import DatabaseWriter
-from .reader_options import ReaderOptions
 from .robot_results_parser import RobotResultsParser

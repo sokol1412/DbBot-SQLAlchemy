@@ -20,17 +20,8 @@ Directory structure
 +-----------+------------------------------------------------------------------+
 | Directory | Description                                                      |
 +===========+==================================================================+
-| atests    | Robot Framework-powered acceptance tests for DbBot. Also has     |
-|           | some test data in the `testdata` directory.                      |
-+-----------+------------------------------------------------------------------+
 | dbbot     | Source code files of DbBot.                                      |
-+-----------+------------------------------------------------------------------+
-| doc       | Technical documentation about the database schema and utilities  |
-|           | to generate it.                                                  |
 +-----------+------------------------------------------------------------------+
 | examples  | Examples that are using the DbBot created database and extending |
 |           | the 'dbbot' modules.                                             |
-+-----------+------------------------------------------------------------------+
-| tools     | Additional scripts eg. converting databases generated with       |
-|           | Robot Framework 2.7 to 2.8.                                      |
 +-----------+------------------------------------------------------------------+

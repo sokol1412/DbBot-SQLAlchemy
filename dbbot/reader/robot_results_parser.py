@@ -16,20 +16,22 @@ from __future__ import with_statement
 from datetime import datetime
 from hashlib import sha1
 
-from dbbot import Logger
+from loguru import logger
 from robot.api import ExecutionResult
 from sqlalchemy.exc import IntegrityError
 
 
 class RobotResultsParser(object):
 
-    def __init__(self, include_keywords, db, verbose_stream):
-        self._verbose = Logger('Parser', verbose_stream)
+    def __init__(self, include_keywords, db,):
         self._include_keywords = include_keywords
         self._db = db
 
+    def __log(self, message):
+        logger.info(f"Robot Results Parser {message}")    
+
     def xml_to_db(self, xml_file):
-        self._verbose('- Parsing %s' % xml_file)
+        self.__log('- Parsing %s' % xml_file)
         test_run = ExecutionResult(xml_file, include_keywords=self._include_keywords)
         hash_string = self._hash(xml_file)
         try:
@@ -76,11 +78,11 @@ class RobotResultsParser(object):
         self._parse_tag_statistics(statistics.tags, test_run_id)
 
     def _parse_test_run_statistics(self, test_run_statistics, test_run_id):
-        self._verbose('`--> Parsing test run statistics')
+        self.__log('`--> Parsing test run statistics')
         [self._parse_test_run_stats(stat, test_run_id) for stat in test_run_statistics]
 
     def _parse_tag_statistics(self, tag_statistics, test_run_id):
-        self._verbose('  `--> Parsing tag statistics')
+        self.__log('  `--> Parsing tag statistics')
         [self._parse_tag_stats(stat, test_run_id) for stat in tag_statistics.tags.values()]
 
     def _parse_tag_stats(self, stat, test_run_id):
@@ -102,7 +104,7 @@ class RobotResultsParser(object):
         })
 
     def _parse_suite(self, suite, test_run_id, parent_suite_id=None):
-        self._verbose('`--> Parsing suite: %s' % suite.name)
+        self.__log('`--> Parsing suite: %s' % suite.name)
         try:
             suite_id = self._db.insert('suites', {
                 'suite_id': parent_suite_id,
@@ -121,7 +123,7 @@ class RobotResultsParser(object):
         self._parse_suite_status(test_run_id, suite_id, suite)
         self._parse_suites(suite, test_run_id, suite_id)
         self._parse_tests(suite.tests, test_run_id, suite_id)
-        self._parse_keywords(suite.keywords, test_run_id, suite_id, None)
+        self._parse_keywords([x for x in (suite.setup, suite.teardown) if x], test_run_id, suite_id, None)
 
     def _parse_suite_status(self, test_run_id, suite_id, suite):
         self._db.insert_or_ignore('suite_status', {
@@ -140,7 +142,7 @@ class RobotResultsParser(object):
         [self._parse_test(test, test_run_id, suite_id) for test in tests]
 
     def _parse_test(self, test, test_run_id, suite_id):
-        self._verbose('  `--> Parsing test: %s' % test.name)
+        self.__log('  `--> Parsing test: %s' % test.name)
         try:
             test_id = self._db.insert('tests', {
                 'suite_id': suite_id,
@@ -157,7 +159,7 @@ class RobotResultsParser(object):
             })
         self._parse_test_status(test_run_id, test_id, test)
         self._parse_tags(test.tags, test_id)
-        self._parse_keywords(test.keywords, test_run_id, suite_id, test_id)
+        self._parse_keywords([x for x in (test.setup, *test.body, test.teardown) if x], test_run_id, suite_id, test_id)
 
     def _parse_test_status(self, test_run_id, test_id, test):
         self._db.insert_or_ignore('test_status', {
@@ -187,7 +189,7 @@ class RobotResultsParser(object):
                 'doc': keyword.doc
             })
         except IntegrityError as e:
-            self._verbose(f'Keywords has been Insert. {e}')
+            self.__log(f'Keywords has been Insert. {e}')
             keyword_id = self._db.fetch_id('keywords', {
                 'suite_id': suite_id,
                 'test_id': test_id,
