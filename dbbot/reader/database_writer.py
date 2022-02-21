@@ -11,7 +11,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-from dbbot import Logger
+from loguru import logger
 from sqlalchemy import (Column, DateTime, ForeignKey, Integer, MetaData,
                         Sequence, String, Table, Text, UniqueConstraint,
                         create_engine)
@@ -21,15 +21,17 @@ from sqlalchemy.sql import and_, select
 
 class DatabaseWriter(object):
 
-    def __init__(self, db_url, verbose_stream):
-        self._verbose = Logger('DatabaseWriter', verbose_stream)
+    def __init__(self, db_url):    
         self._engine = create_engine(db_url)
         self._connection = self._engine.connect()
         self._metadata = MetaData()
         self._init_schema()
 
+    def __log(self, message):
+        logger.info(f"Database Writer {message}")    
+
     def _init_schema(self):
-        self._verbose('- Initializing database schema')
+        self.__log('- Initializing database schema')
         self.test_runs = self._create_table_test_runs()
         self.test_run_status = self._create_table_test_run_status()
         self.test_run_errors = self._create_table_test_run_errors()
@@ -99,7 +101,7 @@ class DatabaseWriter(object):
             Column('elapsed', Integer, nullable=False),
             Column('failed', Integer, nullable=False),
             Column('passed', Integer, nullable=False),
-            Column('status', String(4), nullable=False)
+            Column('status', String(10), nullable=False)
         ), ('test_run_id', 'suite_id'))
 
     def _create_table_tests(self):
@@ -115,7 +117,7 @@ class DatabaseWriter(object):
         return self._create_table('test_status', (
             Column('test_run_id', Integer, ForeignKey('test_runs.id'), nullable=False),
             Column('test_id', Integer, ForeignKey('tests.id'), nullable=False),
-            Column('status', String(4), nullable=False),
+            Column('status', String(10), nullable=False),
             Column('elapsed', Integer, nullable=False)
         ), ('test_run_id', 'test_id'))
 
@@ -134,7 +136,7 @@ class DatabaseWriter(object):
         return self._create_table('keyword_status', (
             Column('test_run_id', Integer, ForeignKey('test_runs.id'), nullable=False),
             Column('keyword_id', Integer, ForeignKey('keywords.id'), nullable=False),
-            Column('status', String(4), nullable=False),
+            Column('status', String(10), nullable=False),
             Column('elapsed', Integer, nullable=False)
         ))
 
@@ -193,10 +195,10 @@ class DatabaseWriter(object):
         try:
             self.insert(table_name, criteria)
         except IntegrityError as e:
-            self._verbose(e)
-            self._verbose('Failed insert to {table} with values {values}'.format(table=table_name,
+            self.__log(e)
+            self.__log('Failed insert to {table} with values {values}'.format(table=table_name,
                                                                                  values=list(criteria.values())))
 
     def close(self):
-        self._verbose('- Closing database connection')
+        self.__log('- Closing database connection')
         self._connection.close()

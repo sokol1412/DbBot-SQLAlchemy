@@ -16,24 +16,44 @@ import os
 import sys
 
 sys.path.append(os.path.abspath(__file__ + '/../..'))
-from dbbot.reader import DatabaseWriter, ReaderOptions, RobotResultsParser
+from collections import namedtuple
+
+from loguru import logger
 from robot.errors import DataError
+
+from dbbot.reader import DatabaseWriter, RobotResultsParser
 
 
 class DbBot(object):
 
     DRY_RUN_DB_URL = 'sqlite:///:memory:'
 
-    def __init__(self):
-        self._options = ReaderOptions()
-        verbose_stream = sys.stdout if self._options.be_verbose else None
-        database_url = self._resolve_db_url()
-        self._db = DatabaseWriter(database_url, verbose_stream)
-        self._parser = RobotResultsParser(
-            self._options.include_keywords,
-            self._db,
-            verbose_stream
-        )
+    def __init__(
+            self,
+            file_path: str,
+            *,
+            database_url: str,
+            include_keywords: bool = False,
+            dry_run: bool = False,
+        ):
+            """This version of dbbot is only runnable from code.
+            db_bot = DbBot(output_xml, database_url=uri, include_keywords=False)
+
+            Args:
+                file_path (str): Path to output xml
+                database_url (str): connection string to dbbot database
+                include_keywords (bool, optional): whether to pull keywords and their execution into database. Defaults to False.
+                dry_run (bool, optional): show what would happen but do not execute. Defaults to False.
+                be_verbose (bool, optional): much logging or not much. Defaults to True.
+            """
+            self._options = namedtuple(
+                "options",
+                ["dry_run", "include_keywords", "db_url", "file_paths"],
+            )(dry_run, include_keywords, database_url, [file_path])
+            self._db = DatabaseWriter(self._options.db_url)
+            self._parser = RobotResultsParser(
+                self._options.include_keywords, self._db
+            )
 
     def _resolve_db_url(self):
         return self.DRY_RUN_DB_URL if self._options.dry_run else self._options.db_url

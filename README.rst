@@ -21,13 +21,11 @@ The goal is to support the following databases:
 
 Requirements
 ------------
-DbBot-SQLAlchemy is tested on
+DbBot-SQLAlchemy-2.0-xam is tested on
 
--  `Python`__ 3.5+
--  `Robot Framework`_ 3.0+
--  `SQLAlchemy`_ 1.2+
-
-It may (though it is not guaranteed) work with older versions of dependencies.
+-  `Python`__ 3.9+
+-  `Robot Framework`_ 4.0+
+-  `SQLAlchemy`_ 1.4+
 
 How it works
 ------------
@@ -70,103 +68,18 @@ Usage examples
 
 Typical usage with a single output.xml file:
 
-::
+It's usable in pretty much the same way as original, the only difference in this fork is that it's only runnable from inside Python code.
+`from dbbot.run import DbBot`
+`db_bot = DbBot(output_xml, database_url=uri, include_keywords=False)`
+`db_bot.run()`
 
-    python -m dbbot.run atests/testdata/one_suite/test_output.xml
-
-If the database does not already exist, it's created. Otherwise the test
-results are just inserted into the existing database. Only new results are
-inserted.
-
-The default database is SQLite database named `robot_results.db`.
-
-Additional options are:
-
-+-------------------+---------------------------+--------------------------+
-| Short format      | Long format               | Description              |
-+===================+===========================+==========================+
-| `-k`              | `--also-keywords`         | Parse also suites' and   |
-|                   |                           | tests' keywords          |
-+-------------------+---------------------------+--------------------------+
-| `-v`              | `--verbose`               | Print output to the      |
-|                   |                           | console.                 |
-+-------------------+---------------------------+--------------------------+
-| `-b DB_URL`       | `--database=DB_URL`       | SQLAlchemy database URL  |
-|                   |                           | for test run results     |
-+-------------------+---------------------------+--------------------------+
-| `-d`              | `--dry-run`               | Do everything except     |
-|                   |                           | store the results.       |
-+-------------------+---------------------------+--------------------------+
-
-
-Specifying custom database name:
-
-::
-
-    $ python -m dbbot.run  -b sqlite:///my_own_database.db atests/testdata/one_suite/test_output.xml
-    $ python -m dbbot.run  -b postgresql://postgres:postgres@localhost:5432/postgres atests/testdata/one_suite/test_output.xml
-    $ python -m dbbot.run  -b mysql+pymysql://user:password@localhost:3306/robot atests/testdata/one_suite/test_output.xml
-
-    If the password contains '@', You should replace it with urlencode, example: '%40'
-
-Parsing test run results with keywords and related data included:
-
-::
-
-    python -m dbbot.run -k atests/testdata/one_suite/test_output.xml
-
-Giving multiple test run result files at the same time:
-
-::
-
-    python -m dbbot.run atests/testdata/one_suite/test_output.xml atests/testdata/one_suite/output_latter.xml
-
-Database
---------
-
-You can inspect the created database using the `sqlite3`_ command-line tool:
-
-.. code:: sqlite3
-
-    $ sqlite3 robot_results.db
-
-    sqlite> .tables
-    arguments        suite_status     test_run_errors  tests
-    keyword_status   suites           test_run_status
-    keywords         tag_status       test_runs
-    messages         tags             test_status
-
-    sqlite> SELECT count(), tests.id, tests.name
-            FROM tests, test_status
-            WHERE tests.id == test_status.test_id AND
-            test_status.status == "FAIL"
-            GROUP BY tests.name;
-
-Please note that when database is initialized, no indices are created by
-DbBot. This is to avoid slowing down the inserts. You might want to add
-indices to the database by hand to speed up certain queries in your own
-scripts.
-
-For information about the database schema, see `doc/robot_database.md`__.
-
-Use case example: Most failing tests
-------------------------------------
-
-One of the common use cases for DbBot is to get a report of the most commonly
-failing suites, tests and keywords. There's an example for this purpose in
-`examples/FailBot/bin/failbot`.
-
-Failbot is a Python script used to produce a summary web page of the failing
-suites, tests and keywords, using the information stored in the DbBot
-database. Please adjust (the barebone) HTML templates in
-`examples/FailBot/templates` to your needs.
-
-Writing your own scripts
-------------------------
-
-Please take a look at the modules in `examples/FailBot/failbot` as an example
-on how to build on top of the classes provided by DbBot to satisfy your own
-scripting needs.
+the parameters are streamlined:
+file_path to the output xml
+database_url where the data is supposed to be dump (only database needs to exist)
+verbose_stream target, by default sys.stdout
+whether to include keyword or not
+whether to run or dry run the writes
+whether to be verbose or quiet
 
 License
 -------
