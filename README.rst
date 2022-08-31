@@ -21,7 +21,7 @@ The goal is to support the following databases:
 
 Requirements
 ------------
-DbBot-SQLAlchemy-2.0-xam is tested on
+DbBot-SQLAlchemy-4.0.0 is tested on
 
 -  `Python`__ 3.9+
 -  `Robot Framework`_ 4.0+
