@@ -178,6 +178,8 @@ class RobotResultsParser(object):
             [self._parse_keyword(keyword, test_run_id, suite_id, test_id) for keyword in keywords]
 
     def _parse_keyword(self, keyword, test_run_id, suite_id, test_id):
+        if not keyword.id:
+            return
         try:
             keyword_id = self._db.insert('keywords', {
                 'suite_id': suite_id,
