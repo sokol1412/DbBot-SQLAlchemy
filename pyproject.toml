@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "dbbot-sqlalchemy"
-version = "4.0.0"
+version = "4.0.1"
 description = ""
 authors = ["Your Name <you@example.com>"]
 license = "Apache License Version 2"
