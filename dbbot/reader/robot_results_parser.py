@@ -22,33 +22,47 @@ from sqlalchemy.exc import IntegrityError
 
 
 class RobotResultsParser(object):
-
-    def __init__(self, include_keywords, db,):
+    def __init__(
+        self,
+        include_keywords,
+        db,
+    ):
         self._include_keywords = include_keywords
         self._db = db
 
     def __log(self, message):
-        logger.info(f"Robot Results Parser {message}")    
+        logger.info(f"Robot Results Parser {message}")
 
     def xml_to_db(self, xml_file):
-        self.__log('- Parsing %s' % xml_file)
+        self.__log("- Parsing %s" % xml_file)
         test_run = ExecutionResult(xml_file, include_keywords=self._include_keywords)
         hash_string = self._hash(xml_file)
         try:
-            test_run_id = self._db.insert('test_runs', {
-                'hash': hash_string,
-                'imported_at': datetime.utcnow(),
-                'source_file': test_run.source,
-                'started_at': self._format_robot_timestamp(test_run.suite.starttime),
-                'finished_at': self._format_robot_timestamp(test_run.suite.endtime)
-            })
+            test_run_id = self._db.insert(
+                "test_runs",
+                {
+                    "hash": hash_string,
+                    "imported_at": datetime.utcnow(),
+                    "source_file": test_run.source,
+                    "started_at": self._format_robot_timestamp(
+                        test_run.suite.starttime
+                    ),
+                    "finished_at": self._format_robot_timestamp(test_run.suite.endtime),
+                },
+            )
         except IntegrityError:
-            test_run_id = self._db.fetch_id('test_runs', {
-                'source_file': test_run.source,
-                'started_at': self._format_robot_timestamp(test_run.suite.starttime),
-                'finished_at': self._format_robot_timestamp(test_run.suite.endtime)
-            })
-        self._parse_errors(test_run.errors.messages, test_run_id)
+            test_run_id = self._db.fetch_id(
+                "test_runs",
+                {
+                    "source_file": test_run.source,
+                    "started_at": self._format_robot_timestamp(
+                        test_run.suite.starttime
+                    ),
+                    "finished_at": self._format_robot_timestamp(test_run.suite.endtime),
+                },
+            )
+        if hasattr(test_run.errors, "messages"):
+            self._parse_errors(test_run.errors.messages, test_run_id)
         self._parse_statistics(test_run.statistics, test_run_id)
         self._parse_suite(test_run.suite, test_run_id)
 
@@ -56,7 +70,7 @@ class RobotResultsParser(object):
     def _hash(xml_file):
         block_size = 68157440
         hasher = sha1()
-        with open(xml_file, 'rb') as f:
+        with open(xml_file, "rb") as f:
             chunk = f.read(block_size)
             while len(chunk) > 0:
                 hasher.update(chunk)
@@ -65,185 +79,252 @@ class RobotResultsParser(object):
 
     def _parse_errors(self, errors, test_run_id):
         for error in errors:
-            self._db.insert_or_ignore('test_run_errors', {
-                'test_run_id': test_run_id, 'level': error.level,
-                'timestamp': self._format_robot_timestamp(error.timestamp),
-                'time_string': self._format_robot_timestamp_to_time_string(error.timestamp),
-                'content': error.message,
-                'content_hash': self._string_hash(error.message)
-            })
+            self._db.insert_or_ignore(
+                "test_run_errors",
+                {
+                    "test_run_id": test_run_id,
+                    "level": error.level,
+                    "timestamp": self._format_robot_timestamp(error.timestamp),
+                    "time_string": self._format_robot_timestamp_to_time_string(
+                        error.timestamp
+                    ),
+                    "content": error.message,
+                    "content_hash": self._string_hash(error.message),
+                },
+            )
 
     def _parse_statistics(self, statistics, test_run_id):
-        self._parse_test_run_statistics(statistics.total, test_run_id)
-        self._parse_tag_statistics(statistics.tags, test_run_id)
+        if hasattr(statistics, "total"):
+            self._parse_test_run_statistics(statistics.total, test_run_id)
+        if hasattr(statistics, "tags"):
+            self._parse_tag_statistics(statistics.tags, test_run_id)
 
     def _parse_test_run_statistics(self, test_run_statistics, test_run_id):
-        self.__log('`--> Parsing test run statistics')
+        self.__log("`--> Parsing test run statistics")
         [self._parse_test_run_stats(stat, test_run_id) for stat in test_run_statistics]
 
     def _parse_tag_statistics(self, tag_statistics, test_run_id):
-        self.__log('  `--> Parsing tag statistics')
-        [self._parse_tag_stats(stat, test_run_id) for stat in tag_statistics.tags.values()]
+        self.__log("  `--> Parsing tag statistics")
+        [
+            self._parse_tag_stats(stat, test_run_id)
+            for stat in tag_statistics.tags.values()
+        ]
 
     def _parse_tag_stats(self, stat, test_run_id):
-        self._db.insert_or_ignore('tag_status', {
-            'test_run_id': test_run_id,
-            'name': stat.name,
-            'elapsed': getattr(stat, 'elapsed', None),
-            'failed': stat.failed,
-            'passed': stat.passed
-        })
+        self._db.insert_or_ignore(
+            "tag_status",
+            {
+                "test_run_id": test_run_id,
+                "name": stat.name,
+                "elapsed": getattr(stat, "elapsed", None),
+                "failed": stat.failed,
+                "passed": stat.passed,
+            },
+        )
 
     def _parse_test_run_stats(self, stat, test_run_id):
-        self._db.insert_or_ignore('test_run_status', {
-            'test_run_id': test_run_id,
-            'name': stat.name,
-            'elapsed': getattr(stat, 'elapsed', None),
-            'failed': stat.failed,
-            'passed': stat.passed
-        })
+        self._db.insert_or_ignore(
+            "test_run_status",
+            {
+                "test_run_id": test_run_id,
+                "name": stat.name,
+                "elapsed": getattr(stat, "elapsed", None),
+                "failed": stat.failed,
+                "passed": stat.passed,
+            },
+        )
 
     def _parse_suite(self, suite, test_run_id, parent_suite_id=None):
-        self.__log('`--> Parsing suite: %s' % suite.name)
+        self.__log("`--> Parsing suite: %s" % suite.name)
         try:
-            suite_id = self._db.insert('suites', {
-                'suite_id': parent_suite_id,
-                'test_run_id': test_run_id,
-                'xml_id': suite.id,
-                'name': suite.name,
-                'source': suite.source,
-                'doc': suite.doc
-            })
+            suite_id = self._db.insert(
+                "suites",
+                {
+                    "suite_id": parent_suite_id,
+                    "test_run_id": test_run_id,
+                    "xml_id": suite.id,
+                    "name": suite.name,
+                    "source": suite.source,
+                    "doc": suite.doc,
+                },
+            )
         except IntegrityError:
-            suite_id = self._db.fetch_id('suites', {
-                'test_run_id': test_run_id,
-                'name': suite.name,
-                'source': suite.source
-            })
+            suite_id = self._db.fetch_id(
+                "suites",
+                {
+                    "test_run_id": test_run_id,
+                    "name": suite.name,
+                    "source": suite.source,
+                },
+            )
         self._parse_suite_status(test_run_id, suite_id, suite)
         self._parse_suites(suite, test_run_id, suite_id)
         self._parse_tests(suite.tests, test_run_id, suite_id)
-        self._parse_keywords([x for x in (suite.setup, suite.teardown) if x], test_run_id, suite_id, None)
+        self._parse_keywords(
+            [x for x in (suite.setup, suite.teardown) if x], test_run_id, suite_id, None
+        )
 
     def _parse_suite_status(self, test_run_id, suite_id, suite):
-        self._db.insert_or_ignore('suite_status', {
-            'test_run_id': test_run_id,
-            'suite_id': suite_id,
-            'passed': suite.statistics.passed,
-            'failed': suite.statistics.failed,
-            'elapsed': suite.elapsedtime,
-            'status': suite.status
-        })
+        self._db.insert_or_ignore(
+            "suite_status",
+            {
+                "test_run_id": test_run_id,
+                "suite_id": suite_id,
+                "passed": suite.statistics.passed,
+                "failed": suite.statistics.failed,
+                "elapsed": suite.elapsedtime,
+                "status": suite.status,
+            },
+        )
 
     def _parse_suites(self, suite, test_run_id, parent_suite_id):
-        [self._parse_suite(subsuite, test_run_id, parent_suite_id) for subsuite in suite.suites]
+        if hasattr(suite, "suites"):
+            [
+                self._parse_suite(subsuite, test_run_id, parent_suite_id)
+                for subsuite in suite.suites
+            ]
 
     def _parse_tests(self, tests, test_run_id, suite_id):
         [self._parse_test(test, test_run_id, suite_id) for test in tests]
 
     def _parse_test(self, test, test_run_id, suite_id):
-        self.__log('  `--> Parsing test: %s' % test.name)
+        self.__log("  `--> Parsing test: %s" % test.name)
         try:
-            test_id = self._db.insert('tests', {
-                'suite_id': suite_id,
-                'xml_id': test.id,
-                'name': test.name,
-                'timeout': test.timeout,
-                'doc': test.doc
-            })
+            test_id = self._db.insert(
+                "tests",
+                {
+                    "suite_id": suite_id,
+                    "xml_id": test.id,
+                    "name": test.name,
+                    "timeout": test.timeout,
+                    "doc": test.doc,
+                },
+            )
         except IntegrityError:
-            test_id = self._db.fetch_id('tests', {
-                'suite_id': suite_id,
-                'xml_id': test.id,
-                'name': test.name
-            })
+            test_id = self._db.fetch_id(
+                "tests", {"suite_id": suite_id, "xml_id": test.id, "name": test.name}
+            )
         self._parse_test_status(test_run_id, test_id, test)
         self._parse_tags(test.tags, test_id)
-        self._parse_keywords([x for x in (test.setup, *test.body, test.teardown) if x], test_run_id, suite_id, test_id)
+        self._parse_keywords(
+            [x for x in (test.setup, *test.body, test.teardown) if x],
+            test_run_id,
+            suite_id,
+            test_id,
+        )
 
     def _parse_test_status(self, test_run_id, test_id, test):
-        self._db.insert_or_ignore('test_status', {
-            'test_run_id': test_run_id,
-            'test_id': test_id,
-            'status': test.status,
-            'elapsed': test.elapsedtime
-        })
+        self._db.insert_or_ignore(
+            "test_status",
+            {
+                "test_run_id": test_run_id,
+                "test_id": test_id,
+                "status": test.status,
+                "elapsed": test.elapsedtime,
+            },
+        )
 
     def _parse_tags(self, tags, test_id):
         for tag in tags:
-            self._db.insert_or_ignore('tags', {'test_id': test_id, 'content': tag})
+            self._db.insert_or_ignore("tags", {"test_id": test_id, "content": tag})
 
     def _parse_keywords(self, keywords, test_run_id, suite_id, test_id):
         if self._include_keywords:
-            [self._parse_keyword(keyword, test_run_id, suite_id, test_id) for keyword in keywords]
+            for keyword in keywords:
+                if keyword.id:
+                    self._parse_keyword(keyword, test_run_id, suite_id, test_id)
 
     def _parse_keyword(self, keyword, test_run_id, suite_id, test_id):
-        if not keyword.id:
-            return
         try:
-            keyword_id = self._db.insert('keywords', {
-                'suite_id': suite_id,
-                'test_id': test_id,
-                'keyword_xml_id': keyword.id,
-                'name': keyword.name,
-                'type': keyword.type,
-                'timeout': keyword.timeout,
-                'doc': keyword.doc
-            })
+            keyword_id = self._db.insert(
+                "keywords",
+                {
+                    "suite_id": suite_id,
+                    "test_id": test_id,
+                    "keyword_xml_id": keyword.id,
+                    "name": keyword.name,
+                    "type": keyword.type,
+                    "timeout": keyword.timeout,
+                    "doc": keyword.doc,
+                },
+            )
         except IntegrityError as e:
-            self.__log(f'Keywords has been Insert. {e}')
-            keyword_id = self._db.fetch_id('keywords', {
-                'suite_id': suite_id,
-                'test_id': test_id,
-                'keyword_xml_id': keyword.id,
-                'name': keyword.name,
-                'type': keyword.type
-            })
+            self.__log(f"Keywords has been Insert. {e}")
+            keyword_id = self._db.fetch_id(
+                "keywords",
+                {
+                    "suite_id": suite_id,
+                    "test_id": test_id,
+                    "keyword_xml_id": keyword.id,
+                    "name": keyword.name,
+                    "type": keyword.type,
+                },
+            )
         self._parse_keyword_status(test_run_id, keyword_id, keyword)
-        self._parse_messages(keyword.messages, suite_id, test_id, keyword_id)
-        self._parse_arguments(keyword.args, suite_id, test_id, keyword_id)
-        self._parse_keywords(keyword.keywords, test_run_id, suite_id, test_id)
+        if hasattr(keyword, "messages"):
+            self._parse_messages(keyword.messages, suite_id, test_id, keyword_id)
+        if hasattr(keyword, "args"):
+            self._parse_arguments(keyword.args, suite_id, test_id, keyword_id)
+        if hasattr(keyword, "keywords"):
+            self._parse_keywords(keyword.keywords, test_run_id, suite_id, test_id)
 
     def _parse_keyword_status(self, test_run_id, keyword_id, keyword):
-        self._db.insert_or_ignore('keyword_status', {
-            'test_run_id': test_run_id,
-            'keyword_id': keyword_id,
-            'status': keyword.status,
-            'elapsed': keyword.elapsedtime
-        })
+        self._db.insert_or_ignore(
+            "keyword_status",
+            {
+                "test_run_id": test_run_id,
+                "keyword_id": keyword_id,
+                "status": keyword.status,
+                "elapsed": keyword.elapsedtime,
+            },
+        )
 
     def _parse_messages(self, messages, suite_id, test_id, keyword_id):
         for message in messages:
-            self._db.insert_or_ignore('messages', {
-                'suite_id': suite_id,
-                'test_id': test_id,
-                'keyword_id': keyword_id,
-                'level': message.level,
-                'timestamp': self._format_robot_timestamp(message.timestamp),
-                'time_string': self._format_robot_timestamp_to_time_string(message.timestamp),
-                'content': message.message,
-                'content_hash': self._string_hash(message.message)
-            })
+            self._db.insert_or_ignore(
+                "messages",
+                {
+                    "suite_id": suite_id,
+                    "test_id": test_id,
+                    "keyword_id": keyword_id,
+                    "level": message.level,
+                    "timestamp": self._format_robot_timestamp(message.timestamp),
+                    "time_string": self._format_robot_timestamp_to_time_string(
+                        message.timestamp
+                    ),
+                    "content": message.message,
+                    "content_hash": self._string_hash(message.message),
+                },
+            )
 
     def _parse_arguments(self, args, suite_id, test_id, keyword_id):
         for index, arg in enumerate(args):
-            self._db.insert_or_ignore('arguments', {
-                'suite_id': suite_id,
-                'test_id': test_id,
-                'keyword_id': keyword_id,
-                'position': index,
-                'content': arg,
-                'content_hash': self._string_hash(arg)
-            })
+            self._db.insert_or_ignore(
+                "arguments",
+                {
+                    "suite_id": suite_id,
+                    "test_id": test_id,
+                    "keyword_id": keyword_id,
+                    "position": index,
+                    "content": arg,
+                    "content_hash": self._string_hash(arg),
+                },
+            )
 
     @staticmethod
     def _format_robot_timestamp(timestamp):
-        return datetime.strptime(timestamp, '%Y%m%d %H:%M:%S.%f') if timestamp else None
+        return datetime.strptime(timestamp, "%Y%m%d %H:%M:%S.%f") if timestamp else None
 
     @staticmethod
     def _format_robot_timestamp_to_time_string(timestamp):
-        return datetime.strftime(datetime.strptime(timestamp, '%Y%m%d %H:%M:%S.%f'),
-                                 '%Y-%m-%d %H:%M:%S.%f') if timestamp else None
+        return (
+            datetime.strftime(
+                datetime.strptime(timestamp, "%Y%m%d %H:%M:%S.%f"),
+                "%Y-%m-%d %H:%M:%S.%f",
+            )
+            if timestamp
+            else None
+        )
 
     @staticmethod
     def _string_hash(string):
